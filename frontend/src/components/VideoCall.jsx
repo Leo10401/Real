@@ -4,8 +4,9 @@ import React, { useEffect, useRef, useState } from "react";
 import io from "socket.io-client";
 import SimplePeer from "simple-peer";
 
-const SIGNALING_SERVER = "http://localhost:5000"; // URL of your backend signaling server
-const ROOM_ID = "video-room"; // This can be dynamic for different rooms
+
+const SIGNALING_SERVER = process.env.NEXT_PUBLIC_SIGNALING_SERVER;
+const ROOM_ID = process.env.NEXT_PUBLIC_ROOM_ID;
 
 const VideoCall = () => {
   const [peers, setPeers] = useState([]);
