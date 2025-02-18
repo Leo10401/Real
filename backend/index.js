@@ -2,18 +2,29 @@
 const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
-const cors = require("cors");
 
 const app = express();
+const cors = require("cors");
+
+const allowedOrigins = ["https://real-olive.vercel.app"]; // Your Vercel frontend
+
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || "*", // Use environment variable for security
+  origin: allowedOrigins,
   methods: ["GET", "POST"],
+  credentials: true, // Allow cookies if needed
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
-app.use(cors(corsOptions));// Enable CORS for development
+
+app.use(cors(corsOptions));
+
 
 const server = http.createServer(app);
 const io = socketIo(server, {
-  cors: { origin: process.env.SOCKET_ORIGIN || "*" }, // Use env variable for production URL
+  cors: {
+    origin: "https://real-olive.vercel.app", // Allow only your Vercel frontend
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
 });
 
 
