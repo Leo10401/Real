@@ -5,12 +5,17 @@ const socketIo = require("socket.io");
 const cors = require("cors");
 
 const app = express();
-app.use(cors()); // Enable CORS for development
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || "*", // Use environment variable for security
+  methods: ["GET", "POST"],
+};
+app.use(cors(corsOptions));// Enable CORS for development
 
 const server = http.createServer(app);
 const io = socketIo(server, {
-  cors: { origin: "*" } // In production, restrict this to your frontend domain
+  cors: { origin: process.env.SOCKET_ORIGIN || "*" }, // Use env variable for production URL
 });
+
 
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
