@@ -1,30 +1,45 @@
-import React from "react";
+'use client';
+import React, { useEffect, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
 import Head from "next/head";
 import VideoCall from "../components/VideoCall";
 
 const SIGNALING_SERVER = process.env.NEXT_PUBLIC_SIGNALING_SERVER;
-const ROOM_ID = process.env.NEXT_PUBLIC_ROOM_ID;
 
 const Home = () => {
+  const [roomId, setRoomId] = useState("");
+
+  useEffect(() => {
+    // Generate a random room ID only if not already present in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    let existingRoomId = urlParams.get("room");
+
+    if (!existingRoomId) {
+      existingRoomId = uuidv4(); // Generate new room ID
+      urlParams.set("room", existingRoomId);
+      window.history.replaceState({}, "", `?room=${existingRoomId}`);
+    }
+
+    setRoomId(existingRoomId);
+  }, []);
+
   return (
     <div>
       <Head>
         <title>Next.js Video Call App</title>
-        <meta
-          name="description"
-          content="A simple video calling app using Next.js, WebRTC, and Socket.IO"
-        />
+        <meta name="description" content="A simple video calling app using Next.js, WebRTC, and Socket.IO" />
       </Head>
+
       <main style={{ padding: "20px", textAlign: "center" }}>
         <h1>Next.js Video Call App</h1>
 
-        {!SIGNALING_SERVER || !ROOM_ID ? (
-          <p style={{ color: "red", fontWeight: "bold" }}>
-            Missing environment variables! Ensure NEXT_PUBLIC_SIGNALING_SERVER and NEXT_PUBLIC_ROOM_ID are set.
-          </p>
+        {!SIGNALING_SERVER ? (
+          <p style={{ color: "red", fontWeight: "bold" }}>Missing environment variable: NEXT_PUBLIC_SIGNALING_SERVER</p>
         ) : (
-          <VideoCall />
+          <VideoCall roomId={roomId} />
         )}
+
+        <p>Room ID: <strong>{roomId}</strong></p>
       </main>
     </div>
   );

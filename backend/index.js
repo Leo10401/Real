@@ -6,7 +6,7 @@ const socketIo = require("socket.io");
 const app = express();
 const cors = require("cors");
 
-const allowedOrigins = ["https://real-olive.vercel.app"]; // Your Vercel frontend
+const allowedOrigins = ["https://real-olive.vercel.app"|| '*']; // Your Vercel frontend
 
 const corsOptions = {
   origin: allowedOrigins,
@@ -21,7 +21,7 @@ app.use(cors(corsOptions));
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: "https://real-olive.vercel.app", // Allow only your Vercel frontend
+    origin: "https://real-olive.vercel.app"|| '*', // Allow only your Vercel frontend
     methods: ["GET", "POST"],
     credentials: true,
   },
