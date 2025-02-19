@@ -40,6 +40,16 @@ const VideoCall = ({ roomId }) => {
             setPeers((prevPeers) => [...prevPeers, { peerID: data.from, peer }]);
           }
         });
+
+        socketRef.current.on("user-disconnected", (userId) => {
+          console.log("User disconnected:", userId);
+          const peerObj = peersRef.current.find(p => p.peerID === userId);
+          if (peerObj) {
+            peerObj.peer.destroy();
+          }
+          peersRef.current = peersRef.current.filter(p => p.peerID !== userId);
+          setPeers((prevPeers) => prevPeers.filter(p => p.peerID !== userId));
+        });
       })
       .catch((err) => console.error("Failed to get media stream:", err));
 
