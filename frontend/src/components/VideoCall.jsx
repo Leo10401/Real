@@ -107,11 +107,21 @@ const PeerVideo = ({ peer }) => {
   const ref = useRef();
 
   useEffect(() => {
-    peer.on("stream", (stream) => {
+    const handleStream = (stream) => {
       if (ref.current) {
         ref.current.srcObject = stream;
       }
-    });
+    };
+
+    peer.on("stream", handleStream);
+
+    return () => {
+      // Cleanup when component unmounts or peer changes
+      if (ref.current) {
+        ref.current.srcObject = null;
+      }
+      peer.off("stream", handleStream);
+    };
   }, [peer]);
 
   return <video ref={ref} autoPlay playsInline style={{ width: "300px", margin: "10px", border: "1px solid #ccc" }} />;
