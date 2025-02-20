@@ -14,7 +14,11 @@ const io = new Server(server, {
 const activeRooms = new Map();
 
 io.on('connection', (socket) => {
+  console.log('New connection:', socket.id);
+
   socket.on('join-room', ({ roomId, userId, userName, passcode }) => {
+    console.log(`Join room request from ${userName} (${userId}) for room ${roomId}`);
+    
     // Initialize room if it doesn't exist
     if (!activeRooms.has(roomId)) {
       activeRooms.set(roomId, {
@@ -27,6 +31,7 @@ io.on('connection', (socket) => {
     
     // Validate passcode
     if (room.passcode !== passcode) {
+      console.log('Invalid passcode attempt for room:', roomId);
       socket.emit('join-error', 'Invalid passcode');
       return;
     }
@@ -35,13 +40,14 @@ io.on('connection', (socket) => {
     room.participants.set(userId, userName);
     socket.join(roomId);
 
-    // Notify others in the room
-    socket.to(roomId).emit('user-connected', { userId, userName });
-    
     // Send current participants list to the joining user
     socket.emit('room-users', Array.from(room.participants.entries()));
     
+    // Notify others in the room
+    socket.to(roomId).emit('user-connected', { userId, userName });
+    
     console.log(`User ${userName} (${userId}) joined room ${roomId}`);
+    console.log('Current participants:', Array.from(room.participants.entries()));
   });
 
   socket.on('signal', (data) => {
