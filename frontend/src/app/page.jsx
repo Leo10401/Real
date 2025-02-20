@@ -1,48 +1,104 @@
 'use client';
-import React, { useEffect, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
-import Head from "next/head";
-import VideoCall from "../components/VideoCall";
+import React, { useState } from "react";
+import VideoCall from "@/components/VideoCall";
 
-const SIGNALING_SERVER = process.env.NEXT_PUBLIC_SIGNALING_SERVER;
-
-const Home = () => {
+const HomePage = () => {
   const [roomId, setRoomId] = useState("");
+  const [passcode, setPasscode] = useState("");
+  const [userName, setUserName] = useState("");
+  const [joinedRoom, setJoinedRoom] = useState(false);
+  const [inputRoomId, setInputRoomId] = useState("");
+  const [inputPasscode, setInputPasscode] = useState("");
+  const [inputName, setInputName] = useState("");
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    // Generate a random room ID only if not already present in URL
-    const urlParams = new URLSearchParams(window.location.search);
-    let existingRoomId = urlParams.get("room");
+  const generateRoomCredentials = () => {
+    const randomRoomId = Math.random().toString(36).substring(2, 10);
+    const randomPasscode = Math.random().toString(36).substring(2, 8);
+    setRoomId(randomRoomId);
+    setPasscode(randomPasscode);
+    setInputRoomId(randomRoomId);
+    setInputPasscode(randomPasscode);
+  };
 
-    if (!existingRoomId) {
-      existingRoomId = uuidv4(); // Generate new room ID
-      urlParams.set("room", existingRoomId);
-      window.history.replaceState({}, "", `?room=${existingRoomId}`);
+  const handleJoinRoom = (e) => {
+    e.preventDefault();
+    if (inputRoomId.trim() && inputPasscode.trim() && inputName.trim()) {
+      setRoomId(inputRoomId.trim());
+      setPasscode(inputPasscode.trim());
+      setUserName(inputName.trim());
+      setJoinedRoom(true);
+      setError("");
+    } else {
+      setError("Please enter Room ID, Passcode, and Your Name");
     }
+  };
 
-    setRoomId(existingRoomId);
-  }, []);
+  const handleLeaveRoom = () => {
+    if (window.confirm("Are you sure you want to leave the room?")) {
+      setJoinedRoom(false);
+      setRoomId("");
+      setPasscode("");
+      setUserName("");
+      setInputRoomId("");
+      setInputPasscode("");
+      setInputName("");
+      setError("");
+      window.location.reload();
+    }
+  };
 
   return (
-    <div>
-      <Head>
-        <title>Next.js Video Call App</title>
-        <meta name="description" content="A simple video calling app using Next.js, WebRTC, and Socket.IO" />
-      </Head>
-
-      <main style={{ padding: "20px", textAlign: "center" }}>
-        <h1>Next.js Video Call App</h1>
-
-        {!SIGNALING_SERVER ? (
-          <p style={{ color: "red", fontWeight: "bold" }}>Missing environment variable: NEXT_PUBLIC_SIGNALING_SERVER</p>
-        ) : (
-          <VideoCall roomId={roomId} />
-        )}
-
-        <p>Room ID: <strong>{roomId}</strong></p>
-      </main>
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 to-indigo-600 p-6">
+      {!joinedRoom ? (
+        <div className="flex flex-row-reverse bg-white p-10 rounded-3xl shadow-xl max-w-md w-full text-center">
+          <h1 className="text-3xl font-bold mb-6 text-gray-800">Private Video Chat Rooms</h1>
+          <form onSubmit={handleJoinRoom} className="space-y-5">
+            <input
+              type="text"
+              value={inputRoomId}
+              onChange={(e) => setInputRoomId(e.target.value)}
+              placeholder="Enter Room ID"
+              className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100"
+            />
+            <input
+              type="text"
+              value={inputPasscode}
+              onChange={(e) => setInputPasscode(e.target.value)}
+              placeholder="Enter Passcode"
+              className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100"
+            />
+            <input
+              type="text"
+              value={inputName}
+              onChange={(e) => setInputName(e.target.value)}
+              placeholder="Enter Your Name"
+              className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100"
+            />
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+            <div className="flex gap-4 mt-6">
+              <button type="submit" className="w-1/2 bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition font-semibold">Join Room</button>
+              <button
+                type="button"
+                onClick={generateRoomCredentials}
+                className="w-1/2 bg-gray-400 text-white py-3 rounded-xl hover:bg-gray-500 transition font-semibold"
+              >
+                Generate Room ID
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : (
+        <div className="bg-white p-8 rounded-3xl shadow-xl max-w-lg w-full text-center">
+          <h1 className="text-xl font-semibold text-gray-800 mb-6">Room: {roomId} (Passcode: {passcode})</h1>
+          <button onClick={handleLeaveRoom} className="bg-red-600 text-white py-3 px-6 rounded-xl hover:bg-red-700 transition font-semibold">Leave Room</button>
+          <div className="mt-6">
+            <VideoCall roomId={roomId} passcode={passcode} userName={userName} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default Home;
+export default HomePage;

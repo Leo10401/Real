@@ -1,10 +1,8 @@
-// index.js
-const express = require("express");
-const http = require("http");
-const socketIo = require("socket.io");
-
-const app = express();
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const cors = require("cors");
+const app = express();
 
 const allowedOrigins = ["https://real-olive.vercel.app"|| '*']; // Your Vercel frontend
 
@@ -17,40 +15,45 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-
 const server = http.createServer(app);
-const io = socketIo(server, {
+const io = new Server(server, {
   cors: {
     origin: "https://real-olive.vercel.app"|| '*', // Allow only your Vercel frontend
     methods: ["GET", "POST"],
     credentials: true,
-  },
+  }
 });
 
-
-io.on("connection", (socket) => {
-  console.log("Client connected:", socket.id);
-
-  // Join a room for signaling
-  socket.on("join-room", (roomId) => {
+io.on('connection', (socket) => {
+  socket.on('join-room', ({ roomId, userId, userName }) => {
     socket.join(roomId);
-    console.log(`Socket ${socket.id} joined room ${roomId}`);
-    socket.to(roomId).emit("user-connected", socket.id);
+    socket.to(roomId).emit('user-connected', { userId, userName });
+    console.log(`User ${userName} (${userId}) joined room ${roomId}`);
   });
 
-  // Relay signaling data (offer, answer, ICE candidates)
-  socket.on("signal", (data) => {
-    // data: { to, from, signal }
-    console.log(`Signal from ${data.from} to ${data.to}`);
-    io.to(data.to).emit("signal", data);
+  socket.on('signal', (data) => {
+    io.to(data.to).emit('signal', {
+      signal: data.signal,
+      from: data.from
+    });
   });
 
-  socket.on("disconnect", () => {
-    console.log("Client disconnected:", socket.id);
+  socket.on('manual-disconnect', ({ roomId, userId }) => {
+    socket.to(roomId).emit('user-disconnected', userId);
+    socket.leave(roomId);
+  });
+
+  socket.on('disconnect', () => {
+    const rooms = Object.keys(socket.rooms);
+    rooms.forEach(room => {
+      if (room !== socket.id) {
+        socket.to(room).emit('user-disconnected', socket.id);
+      }
+    });
   });
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, '0.0.0.0', () =>
-  console.log(`Signaling server listening on port ${PORT}`)
-);
+server.listen(PORT, () => {
+  console.log(`Signaling server running on port ${PORT}`);
+});
