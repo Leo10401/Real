@@ -1,189 +1,94 @@
-'use client';
-import React, { useEffect, useRef, useState } from "react";
+"use client";
+import React, { useState, useEffect, useRef } from "react";
 import io from "socket.io-client";
 import SimplePeer from "simple-peer";
 
-const SIGNALING_SERVER = process.env.NEXT_PUBLIC_SIGNALING_SERVER || 'http://localhost:5000';
+const socket = io("https://your-server.com");
 
 const VideoCall = ({ roomId, passcode, userName }) => {
   const [peers, setPeers] = useState([]);
-  const [error, setError] = useState("");
-  const userVideoRef = useRef(null);
+  const userId = useRef(socket.id);
+  const videoRef = useRef();
   const peersRef = useRef([]);
-  const socketRef = useRef(null);
-  const streamRef = useRef(null);
+  const streamRef = useRef();
 
   useEffect(() => {
-    if (!roomId || !passcode || !userName) return;
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
+      streamRef.current = stream;
+      videoRef.current.srcObject = stream;
 
-    const setupCall = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        streamRef.current = stream;
-        if (userVideoRef.current) {
-          userVideoRef.current.srcObject = stream;
+      socket.emit("join-room", { roomId, userId: userId.current, userName, passcode });
+
+      socket.on("room-users", (users) => {
+        users.forEach(([peerId, peerName]) => {
+          if (peerId !== userId.current) {
+            const peer = createPeer(peerId, false);
+            peersRef.current.push({ peerID: peerId, peer, userName: peerName });
+            setPeers((prev) => [...prev, { peerID: peerId, peer, userName: peerName }]);
+          }
+        });
+      });
+
+      socket.on("user-connected", ({ userId: newUserId, userName }) => {
+        if (newUserId !== userId.current) {
+          const peer = createPeer(newUserId, true);
+          peersRef.current.push({ peerID: newUserId, peer, userName });
+          setPeers((prev) => [...prev, { peerID: newUserId, peer, userName }]);
         }
+      });
 
-        socketRef.current = io(SIGNALING_SERVER);
-        
-        await new Promise(resolve => {
-          socketRef.current.on('connect', resolve);
-        });
-
-        const userId = socketRef.current.id;
-        console.log('Connected to server with ID:', userId);
-
-        socketRef.current.emit("join-room", { roomId, userId, userName, passcode });
-
-        socketRef.current.on("room-users", (users) => {
-          console.log('Existing users in room:', users);
-          users.forEach(([peerId, peerName]) => {
-            if (peerId !== userId) {
-              const peer = addPeer(peerId, stream);
-              peersRef.current.push({ peerID: peerId, peer, userName: peerName });
-              setPeers(prev => [...prev, { peerID: peerId, peer, userName: peerName }]);
-            }
-          });
-        });
-
-        socketRef.current.on("user-connected", ({ userId: otherUserId, userName: otherUserName }) => {
-          console.log('New user connected:', otherUserId, otherUserName);
-          if (otherUserId === userId) return;
-          
-          const peer = addPeer(otherUserId, stream);
-          peersRef.current.push({ peerID: otherUserId, peer, userName: otherUserName });
-          setPeers(prev => [...prev, { peerID: otherUserId, peer, userName: otherUserName }]);
-        });
-
-        socketRef.current.on("signal", ({ signal, from }) => {
-          console.log('Received signal from:', from);
-          const item = peersRef.current.find(p => p.peerID === from);
-          
-          if (!item) {
-            const peer = addPeer(from, stream);
-            peersRef.current.push({ peerID: from, peer, userName: "Unknown" });
-            setPeers(prev => [...prev, { peerID: from, peer, userName: "Unknown" }]);
-            peer.signal(signal);
-          } else {
-            item.peer.signal(signal);
+      socket.on("signal", ({ signal, from }) => {
+        const existingPeer = peersRef.current.find((p) => p.peerID === from);
+        if (existingPeer) {
+          try {
+            existingPeer.peer.signal(signal);
+          } catch (err) {
+            console.error("Error processing signal:", err);
           }
-        });
+        }
+      });
 
-        socketRef.current.on("user-disconnected", (userId) => {
-          console.log('User disconnected:', userId);
-          const peerObj = peersRef.current.find(p => p.peerID === userId);
-          if (peerObj) {
-            peerObj.peer.destroy();
-            peersRef.current = peersRef.current.filter(p => p.peerID !== userId);
-            setPeers(prev => prev.filter(p => p.peerID !== userId));
-          }
-        });
-
-      } catch (err) {
-        console.error("Error in setupCall:", err);
-        setError(err.message);
-      }
-    };
-
-    setupCall();
+      socket.on("user-disconnected", (peerID) => {
+        const peerObj = peersRef.current.find((p) => p.peerID === peerID);
+        if (peerObj) {
+          peerObj.peer.destroy();
+        }
+        peersRef.current = peersRef.current.filter((p) => p.peerID !== peerID);
+        setPeers((prev) => prev.filter((p) => p.peerID !== peerID));
+      });
+    });
 
     return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => {
-          track.stop();
-          console.log("Stopped track:", track.kind);
-        });
-        streamRef.current = null;
-      }
-
-      if (userVideoRef.current) {
-        userVideoRef.current.srcObject = null;
-      }
-
-      if (socketRef.current) {
-        socketRef.current.emit("manual-disconnect", { roomId, userId: socketRef.current.id });
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-
-      peersRef.current.forEach(peerObj => {
-        peerObj.peer.destroy();
-      });
-      peersRef.current = [];
-      setPeers([]);
+      socket.emit("manual-disconnect", { roomId, userId: userId.current });
+      streamRef.current?.getTracks().forEach((track) => track.stop());
     };
-  }, [roomId, passcode, userName]);
+  }, []);
 
-  const addPeer = (peerID, stream) => {
-    console.log('Creating peer connection to:', peerID);
-    const peer = new SimplePeer({
-      initiator: false,
-      trickle: false,
-      stream,
+  const createPeer = (peerID, initiator) => {
+    const peer = new SimplePeer({ initiator, trickle: false, stream: streamRef.current });
+
+    peer.on("signal", (signal) => {
+      socket.emit("signal", { to: peerID, from: userId.current, signal });
     });
 
-    peer.on("signal", signal => {
-      console.log('Sending signal to:', peerID);
-      socketRef.current?.emit("signal", {
-        to: peerID,
-        from: socketRef.current.id,
-        signal
-      });
-    });
-
-    peer.on("error", err => {
+    peer.on("error", (err) => {
       console.error("Peer error:", err);
-      setError(`Peer connection error: ${err.message}`);
     });
 
     return peer;
   };
 
-  if (error) {
-    return <div style={{ color: "red", textAlign: "center" }}>{error}</div>;
-  }
-
   return (
-    <div>
-      <h2>Your Video</h2>
-      <div style={{ textAlign: "center" }}>
-        <video ref={userVideoRef} autoPlay playsInline muted style={{ width: "300px", border: "1px solid #ccc" }} />
-        <div>{userName}</div>
-      </div>
-      <h2>Remote Videos ({peers.length} connected)</h2>
-      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center" }}>
-        {peers.map((peerObj) => (
-          <PeerVideo key={peerObj.peerID} peer={peerObj.peer} userName={peerObj.userName} />
+    <div className="flex flex-col items-center justify-center w-full">
+      <video ref={videoRef} autoPlay playsInline muted className="w-1/3 border rounded-md" />
+      <h2 className="mt-4 text-lg font-bold">Participants:</h2>
+      <div className="flex gap-4 mt-2">
+        {peers.map(({ peerID, userName }) => (
+          <div key={peerID} className="p-2 bg-gray-200 rounded-md">
+            {userName}
+          </div>
         ))}
       </div>
-    </div>
-  );
-};
-
-const PeerVideo = ({ peer, userName }) => {
-  const ref = useRef();
-
-  useEffect(() => {
-    const handleStream = (stream) => {
-      if (ref.current) {
-        ref.current.srcObject = stream;
-      }
-    };
-
-    peer.on("stream", handleStream);
-
-    return () => {
-      if (ref.current) {
-        ref.current.srcObject = null;
-      }
-      peer.off("stream", handleStream);
-    };
-  }, [peer]);
-
-  return (
-    <div style={{ margin: "10px", textAlign: "center" }}>
-      <video ref={ref} autoPlay playsInline style={{ width: "300px", border: "1px solid #ccc" }} />
-      <div>{userName}</div>
     </div>
   );
 };
