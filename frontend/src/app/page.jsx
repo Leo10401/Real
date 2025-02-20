@@ -3,30 +3,24 @@ import VideoCall from "@/components/VideoCall";
 import React, { useState } from "react";
 import styles from "./globals.css";
 
+
+
 const HomePage = () => {
   const [roomId, setRoomId] = useState("");
   const [joinedRoom, setJoinedRoom] = useState(false);
   const [inputValue, setInputValue] = useState("");
-  const [passcode, setPasscode] = useState("");
-  const [correctPasscode, setCorrectPasscode] = useState("");
-  const [generatedPasscode, setGeneratedPasscode] = useState(""); // To show the generated passcode
 
   const generateRoomId = () => {
     const randomId = Math.random().toString(36).substring(2, 10);
-    const randomPasscode = Math.random().toString(36).substring(2, 6); // Generate a 4-character passcode
     setRoomId(randomId);
     setInputValue(randomId);
-    setCorrectPasscode(randomPasscode);
-    setGeneratedPasscode(randomPasscode); // Store the passcode for display
   };
 
   const handleJoinRoom = (e) => {
     e.preventDefault();
-    if (inputValue.trim() && passcode.trim() === correctPasscode) {
+    if (inputValue.trim()) {
       setRoomId(inputValue.trim());
       setJoinedRoom(true);
-    } else {
-      alert("Incorrect passcode or room ID. Please try again.");
     }
   };
 
@@ -34,8 +28,6 @@ const HomePage = () => {
     setJoinedRoom(false);
     setRoomId("");
     setInputValue("");
-    setPasscode("");
-    setGeneratedPasscode("");
   };
 
   return (
@@ -49,14 +41,7 @@ const HomePage = () => {
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Enter room ID"
-                className={styles.input}
-              />
-              <input
-                type="text"
-                value={passcode}
-                onChange={(e) => setPasscode(e.target.value)}
-                placeholder="Enter passcode"
+                placeholder="Enter room ID or generate one"
                 className={styles.input}
               />
               <div className={styles.buttonGroup}>
@@ -68,16 +53,10 @@ const HomePage = () => {
                   onClick={generateRoomId}
                   className={styles.generateButton}
                 >
-                  Generate Room ID & Passcode
+                  Generate Room ID
                 </button>
               </div>
             </form>
-            {generatedPasscode && (
-              <div className={styles.generatedInfo}>
-                <p><strong>Room ID:</strong> {roomId}</p>
-                <p><strong>Passcode:</strong> {generatedPasscode}</p>
-              </div>
-            )}
           </div>
         </div>
       ) : (
