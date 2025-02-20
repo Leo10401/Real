@@ -39,7 +39,7 @@ const VideoCall = ({ roomId, passcode, userName }) => {
           console.log('Existing users in room:', users);
           users.forEach(([peerId, peerName]) => {
             if (peerId !== userId) {
-              const peer = createPeer(peerId, userId, stream);
+              const peer = addPeer(peerId, stream);
               peersRef.current.push({ peerID: peerId, peer, userName: peerName });
               setPeers(prev => [...prev, { peerID: peerId, peer, userName: peerName }]);
             }
@@ -50,7 +50,7 @@ const VideoCall = ({ roomId, passcode, userName }) => {
           console.log('New user connected:', otherUserId, otherUserName);
           if (otherUserId === userId) return;
           
-          const peer = createPeer(otherUserId, userId, stream);
+          const peer = addPeer(otherUserId, stream);
           peersRef.current.push({ peerID: otherUserId, peer, userName: otherUserName });
           setPeers(prev => [...prev, { peerID: otherUserId, peer, userName: otherUserName }]);
         });
@@ -58,7 +58,13 @@ const VideoCall = ({ roomId, passcode, userName }) => {
         socketRef.current.on("signal", ({ signal, from }) => {
           console.log('Received signal from:', from);
           const item = peersRef.current.find(p => p.peerID === from);
-          if (item) {
+          
+          if (!item) {
+            const peer = addPeer(from, stream);
+            peersRef.current.push({ peerID: from, peer, userName: "Unknown" });
+            setPeers(prev => [...prev, { peerID: from, peer, userName: "Unknown" }]);
+            peer.signal(signal);
+          } else {
             item.peer.signal(signal);
           }
         });
@@ -108,54 +114,28 @@ const VideoCall = ({ roomId, passcode, userName }) => {
     };
   }, [roomId, passcode, userName]);
 
-  const createPeer = (userToSignal, callerID, stream) => {
-    console.log('Creating peer connection to:', userToSignal);
-    const peer = new SimplePeer({
-      initiator: true,
-      trickle: false,
-      stream,
-    });
-
-    peer.on("signal", (signal) => {
-      console.log('Sending signal to:', userToSignal);
-      socketRef.current?.emit("signal", { 
-        to: userToSignal, 
-        from: callerID, 
-        signal 
-      });
-    });
-
-    peer.on("error", (err) => {
-      console.error("Peer error:", err);
-      setError(`Peer connection error: ${err.message}`);
-    });
-
-    return peer;
-  };
-
-  const addPeer = (incomingSignal, callerID, stream) => {
-    console.log('Adding peer for:', callerID);
+  const addPeer = (peerID, stream) => {
+    console.log('Creating peer connection to:', peerID);
     const peer = new SimplePeer({
       initiator: false,
       trickle: false,
       stream,
     });
 
-    peer.on("signal", (signal) => {
-      console.log('Sending response signal to:', callerID);
-      socketRef.current?.emit("signal", { 
-        to: callerID, 
-        from: socketRef.current.id, 
-        signal 
+    peer.on("signal", signal => {
+      console.log('Sending signal to:', peerID);
+      socketRef.current?.emit("signal", {
+        to: peerID,
+        from: socketRef.current.id,
+        signal
       });
     });
 
-    peer.on("error", (err) => {
+    peer.on("error", err => {
       console.error("Peer error:", err);
       setError(`Peer connection error: ${err.message}`);
     });
 
-    peer.signal(incomingSignal);
     return peer;
   };
 
