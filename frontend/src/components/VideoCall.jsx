@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import io from "socket.io-client";
 import SimplePeer from "simple-peer";
 
-const socket = io("https://your-server.com");
+const socket = io(process.env.NEXT_PUBLIC_SIGNALING_SERVER);
 
 const VideoCall = ({ roomId, passcode, userName }) => {
   const [peers, setPeers] = useState([]);
