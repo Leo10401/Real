@@ -60,7 +60,7 @@ const HomePage = () => {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 to-indigo-600 p-6">
       {!joinedRoom ? (
-        <div className="flex flex-row-reverse bg-white p-10 rounded-3xl shadow-xl max-w-md w-full text-center">
+        <div className="flex flex-row-reverse bg-white p-10 rounded-3xl h-96 shadow-xl max-w-md w-full text-center">
           <h1 className="text-3xl font-bold mb-6 text-gray-800">Private Video Chat Rooms</h1>
           <form onSubmit={handleJoinRoom} className="space-y-5">
             <input
