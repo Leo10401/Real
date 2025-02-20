@@ -4,31 +4,35 @@ const { Server } = require("socket.io");
 const cors = require('cors');
 
 const app = express();
-
-// Enable CORS for all routes
-app.use(cors({
-  origin: ["https://real-olive.vercel.app", "http://localhost:3000"],
-  methods: ["GET", "POST"],
-  credentials: true
-}));
-
 const server = http.createServer(app);
+
+// Updated CORS configuration
+app.use(cors());
+app.options('*', cors()); // Enable pre-flight for all routes
+
+const io = new Server(server, {
+  cors: {
+    origin: true, // Allow all origins in development
+    methods: ["GET", "POST"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Accept",
+      "Origin"
+    ],
+    credentials: true
+  },
+  allowEIO3: true,
+  transports: ['polling', 'websocket'],
+  pingTimeout: 60000,
+  pingInterval: 25000
+});
 
 // Add health check endpoint
 app.get('/', (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.send('Server is running');
-});
-
-const io = new Server(server, {
-  cors: {
-    origin: ["https://real-olive.vercel.app", "http://localhost:3000"],
-    methods: ["GET", "POST"],
-    allowedHeaders: ["*"],
-    credentials: true
-  },
-  allowEIO3: true,
-  transports: ['polling', 'websocket']
 });
 
 const activeRooms = new Map();
