@@ -10,22 +10,9 @@ const VideoCall = ({ roomId }) => {
   const userVideoRef = useRef(null);
   const peersRef = useRef([]);
   const socketRef = useRef(null);
-  const userIdRef = useRef(null);
-
-  const getUserId = () => {
-    let userId = localStorage.getItem('videoCallUserId');
-    if (!userId) {
-      userId = Math.random().toString(36).substring(2, 15);
-      localStorage.setItem('videoCallUserId', userId);
-    }
-    return userId;
-  };
 
   useEffect(() => {
     if (!roomId) return;
-
-    const userId = getUserId();
-    userIdRef.current = userId;
 
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       .then((stream) => {
@@ -33,22 +20,17 @@ const VideoCall = ({ roomId }) => {
           userVideoRef.current.srcObject = stream;
         }
 
-        socketRef.current = io(SIGNALING_SERVER, {
-          query: { userId }
-        });
+        socketRef.current = io(SIGNALING_SERVER);
+        socketRef.current.emit("join-room", roomId);
 
-        socketRef.current.emit("join-room", { roomId, userId });
-
-        socketRef.current.on("user-connected", (otherUserId) => {
-          if (otherUserId === userId) return;
-          console.log("User connected:", otherUserId);
-          const peer = createPeer(otherUserId, userId, stream);
-          peersRef.current.push({ peerID: otherUserId, peer });
-          setPeers((prevPeers) => [...prevPeers, { peerID: otherUserId, peer }]);
+        socketRef.current.on("user-connected", (userId) => {
+          console.log("User connected:", userId);
+          const peer = createPeer(userId, socketRef.current.id, stream);
+          peersRef.current.push({ peerID: userId, peer });
+          setPeers((prevPeers) => [...prevPeers, { peerID: userId, peer }]);
         });
 
         socketRef.current.on("signal", (data) => {
-          if (data.from === userId) return;
           const existingPeer = peersRef.current.find(p => p.peerID === data.from);
           if (existingPeer) {
             existingPeer.peer.signal(data.signal);
@@ -59,33 +41,23 @@ const VideoCall = ({ roomId }) => {
           }
         });
 
-        socketRef.current.on("user-disconnected", (disconnectedUserId) => {
-          if (disconnectedUserId === userId) return;
-          console.log("User disconnected:", disconnectedUserId);
-          const peerObj = peersRef.current.find(p => p.peerID === disconnectedUserId);
+        socketRef.current.on("user-disconnected", (userId) => {
+          console.log("User disconnected:", userId);
+          const peerObj = peersRef.current.find(p => p.peerID === userId);
           if (peerObj) {
             peerObj.peer.destroy();
           }
-          peersRef.current = peersRef.current.filter(p => p.peerID !== disconnectedUserId);
-          setPeers((prevPeers) => prevPeers.filter(p => p.peerID !== disconnectedUserId));
+          peersRef.current = peersRef.current.filter(p => p.peerID !== userId);
+          setPeers((prevPeers) => prevPeers.filter(p => p.peerID !== userId));
         });
-
-        const handleBeforeUnload = () => {
-          socketRef.current.emit("manual-disconnect", { roomId, userId });
-        };
-        window.addEventListener("beforeunload", handleBeforeUnload);
-
-        return () => {
-          window.removeEventListener("beforeunload", handleBeforeUnload);
-          if (socketRef.current) {
-            socketRef.current.emit("manual-disconnect", { roomId, userId });
-            socketRef.current.disconnect();
-            stream.getTracks().forEach(track => track.stop());
-          }
-          peersRef.current.forEach(peerObj => peerObj.peer.destroy());
-        };
       })
       .catch((err) => console.error("Failed to get media stream:", err));
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
   }, [roomId]);
 
   const createPeer = (userToSignal, callerID, stream) => {
@@ -99,8 +71,6 @@ const VideoCall = ({ roomId }) => {
       socketRef.current.emit("signal", { to: userToSignal, from: callerID, signal });
     });
 
-    peer.on("error", (err) => console.error("Peer error:", err));
-
     return peer;
   };
 
@@ -112,10 +82,8 @@ const VideoCall = ({ roomId }) => {
     });
 
     peer.on("signal", (signal) => {
-      socketRef.current.emit("signal", { to: callerID, from: userIdRef.current, signal });
+      socketRef.current.emit("signal", { to: callerID, from: socketRef.current.id, signal });
     });
-
-    peer.on("error", (err) => console.error("Peer error:", err));
 
     peer.signal(incomingSignal);
     return peer;
@@ -123,19 +91,19 @@ const VideoCall = ({ roomId }) => {
 
   return (
     <div>
-      <h2>Your Video (ID: {userIdRef.current})</h2>
+      <h2>Your Video</h2>
       <video ref={userVideoRef} autoPlay playsInline muted style={{ width: "300px", border: "1px solid #ccc" }} />
-      <h2>Remote Videos ({peers.length} connected)</h2>
+      <h2>Remote Videos</h2>
       <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center" }}>
         {peers.map((peerObj) => (
-          <PeerVideo key={peerObj.peerID} peer={peerObj.peer} peerId={peerObj.peerID} />
+          <PeerVideo key={peerObj.peerID} peer={peerObj.peer} />
         ))}
       </div>
     </div>
   );
 };
 
-const PeerVideo = ({ peer, peerId }) => {
+const PeerVideo = ({ peer }) => {
   const ref = useRef();
 
   useEffect(() => {
@@ -148,6 +116,7 @@ const PeerVideo = ({ peer, peerId }) => {
     peer.on("stream", handleStream);
 
     return () => {
+      // Cleanup when component unmounts or peer changes
       if (ref.current) {
         ref.current.srcObject = null;
       }
@@ -155,12 +124,7 @@ const PeerVideo = ({ peer, peerId }) => {
     };
   }, [peer]);
 
-  return (
-    <div style={{ margin: "10px", textAlign: "center" }}>
-      <video ref={ref} autoPlay playsInline style={{ width: "300px", border: "1px solid #ccc" }} />
-      <div>ID: {peerId}</div>
-    </div>
-  );
+  return <video ref={ref} autoPlay playsInline style={{ width: "300px", margin: "10px", border: "1px solid #ccc" }} />;
 };
 
 export default VideoCall;

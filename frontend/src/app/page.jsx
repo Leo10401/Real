@@ -1,77 +1,48 @@
 'use client';
-import VideoCall from "@/components/VideoCall";
-import React, { useState } from "react";
-import styles from "./globals.css";
+import React, { useEffect, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
+import Head from "next/head";
+import VideoCall from "../components/VideoCall";
 
+const SIGNALING_SERVER = process.env.NEXT_PUBLIC_SIGNALING_SERVER;
 
-
-const HomePage = () => {
+const Home = () => {
   const [roomId, setRoomId] = useState("");
-  const [joinedRoom, setJoinedRoom] = useState(false);
-  const [inputValue, setInputValue] = useState("");
 
-  const generateRoomId = () => {
-    const randomId = Math.random().toString(36).substring(2, 10);
-    setRoomId(randomId);
-    setInputValue(randomId);
-  };
+  useEffect(() => {
+    // Generate a random room ID only if not already present in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    let existingRoomId = urlParams.get("room");
 
-  const handleJoinRoom = (e) => {
-    e.preventDefault();
-    if (inputValue.trim()) {
-      setRoomId(inputValue.trim());
-      setJoinedRoom(true);
+    if (!existingRoomId) {
+      existingRoomId = uuidv4(); // Generate new room ID
+      urlParams.set("room", existingRoomId);
+      window.history.replaceState({}, "", `?room=${existingRoomId}`);
     }
-  };
 
-  const handleLeaveRoom = () => {
-    setJoinedRoom(false);
-    setRoomId("");
-    setInputValue("");
-  };
+    setRoomId(existingRoomId);
+  }, []);
 
   return (
-    <div className={styles.container}>
-      {!joinedRoom ? (
-        <div className={styles.joinSection}>
-          <h1>Video Chat Rooms</h1>
-          <div className={styles.formContainer}>
-            <form onSubmit={handleJoinRoom}>
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Enter room ID or generate one"
-                className={styles.input}
-              />
-              <div className={styles.buttonGroup}>
-                <button type="submit" className={styles.joinButton}>
-                  Join Room
-                </button>
-                <button
-                  type="button"
-                  onClick={generateRoomId}
-                  className={styles.generateButton}
-                >
-                  Generate Room ID
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : (
-        <div className={styles.roomSection}>
-          <div className={styles.roomHeader}>
-            <h1>Room: {roomId}</h1>
-            <button onClick={handleLeaveRoom} className={styles.leaveButton}>
-              Leave Room
-            </button>
-          </div>
+    <div>
+      <Head>
+        <title>Next.js Video Call App</title>
+        <meta name="description" content="A simple video calling app using Next.js, WebRTC, and Socket.IO" />
+      </Head>
+
+      <main style={{ padding: "20px", textAlign: "center" }}>
+        <h1>Next.js Video Call App</h1>
+
+        {!SIGNALING_SERVER ? (
+          <p style={{ color: "red", fontWeight: "bold" }}>Missing environment variable: NEXT_PUBLIC_SIGNALING_SERVER</p>
+        ) : (
           <VideoCall roomId={roomId} />
-        </div>
-      )}
+        )}
+z
+        <p>Room ID: <strong>{roomId}</strong></p>
+      </main>
     </div>
   );
 };
 
-export default HomePage;
+export default Home;
