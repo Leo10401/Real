@@ -33,8 +33,21 @@ const VideoCall = ({ roomId, passcode, userName }) => {
           userVideoRef.current.srcObject = stream;
         }
 
+        // Updated socket connection configuration
         socketRef.current = io(SIGNALING_SERVER, {
-          query: { userId }
+          transports: ['polling', 'websocket'],
+          withCredentials: true,
+          extraHeaders: {
+            "Access-Control-Allow-Origin": "*"
+          },
+          query: { 
+            userId,
+            roomId,
+            userName 
+          },
+          reconnection: true,
+          reconnectionAttempts: 5,
+          reconnectionDelay: 1000
         });
 
         socketRef.current.emit("join-room", { roomId, userId });
