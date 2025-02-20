@@ -11,6 +11,7 @@ const HomePage = () => {
   const [inputPasscode, setInputPasscode] = useState("");
   const [inputName, setInputName] = useState("");
   const [error, setError] = useState("");
+  const [isJoining, setIsJoining] = useState(false);
 
   const generateRoomCredentials = () => {
     const randomRoomId = Math.random().toString(36).substring(2, 10);
@@ -21,14 +22,22 @@ const HomePage = () => {
     setInputPasscode(randomPasscode);
   };
 
-  const handleJoinRoom = (e) => {
+  const handleJoinRoom = async (e) => {
     e.preventDefault();
     if (inputRoomId.trim() && inputPasscode.trim() && inputName.trim()) {
-      setRoomId(inputRoomId.trim());
-      setPasscode(inputPasscode.trim());
-      setUserName(inputName.trim());
-      setJoinedRoom(true);
+      setIsJoining(true);
       setError("");
+      try {
+        // The actual connection will be handled in VideoCall component
+        setRoomId(inputRoomId.trim());
+        setPasscode(inputPasscode.trim());
+        setUserName(inputName.trim());
+        setJoinedRoom(true);
+      } catch (err) {
+        setError(err.message || "Failed to join room. Please try again.");
+      } finally {
+        setIsJoining(false);
+      }
     } else {
       setError("Please enter Room ID, Passcode, and Your Name");
     }
@@ -77,7 +86,13 @@ const HomePage = () => {
             />
             {error && <p className="text-red-500 text-sm">{error}</p>}
             <div className="flex gap-4 mt-6">
-              <button type="submit" className="w-1/2 bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition font-semibold">Join Room</button>
+              <button 
+                type="submit" 
+                className="w-1/2 bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition font-semibold"
+                disabled={isJoining}
+              >
+                {isJoining ? 'Joining...' : 'Join Room'}
+              </button>
               <button
                 type="button"
                 onClick={generateRoomCredentials}
