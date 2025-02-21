@@ -111,6 +111,7 @@ const HomePage = () => {
         </div>
       ) : (
         <div className="flex flex-col md:flex-row gap-4 relative">
+          <div className="w-full md:flex-1">
           <div className="w-full flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Room: {roomId}</h2>
             <button
@@ -120,7 +121,6 @@ const HomePage = () => {
               Leave Room
             </button>
           </div>
-          <div className="w-full md:flex-1">
             <VideoCall roomId={roomId} userName={userName} />
           </div>
           
