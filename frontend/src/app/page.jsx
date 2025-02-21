@@ -1,46 +1,60 @@
 'use client';
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import Head from "next/head";
 import VideoCall from "../components/VideoCall";
-
-const SIGNALING_SERVER = process.env.NEXT_PUBLIC_SIGNALING_SERVER;
+import Chat from "../components/Chat";
 
 const Home = () => {
   const [roomId, setRoomId] = useState("");
+  const [joining, setJoining] = useState(false);
 
-  useEffect(() => {
-    // Generate a random room ID only if not already present in URL
-    const urlParams = new URLSearchParams(window.location.search);
-    let existingRoomId = urlParams.get("room");
+  const handleCreateRoom = () => {
+    const newRoomId = uuidv4();
+    setRoomId(newRoomId);
+    window.history.replaceState({}, "", `?room=${newRoomId}`);
+  };
 
-    if (!existingRoomId) {
-      existingRoomId = uuidv4(); // Generate new room ID
-      urlParams.set("room", existingRoomId);
-      window.history.replaceState({}, "", `?room=${existingRoomId}`);
+  const handleJoinRoom = () => {
+    if (roomId.trim()) {
+      window.history.replaceState({}, "", `?room=${roomId.trim()}`);
+      setJoining(true);
     }
-
-    setRoomId(existingRoomId);
-  }, []);
+  };
 
   return (
-    <div>
+    <div style={{ textAlign: "center", padding: "20px" }}>
       <Head>
         <title>Next.js Video Call App</title>
         <meta name="description" content="A simple video calling app using Next.js, WebRTC, and Socket.IO" />
       </Head>
 
-      <main style={{ padding: "20px", textAlign: "center" }}>
-        <h1>Next.js Video Call App</h1>
-
-        {!SIGNALING_SERVER ? (
-          <p style={{ color: "red", fontWeight: "bold" }}>Missing environment variable: NEXT_PUBLIC_SIGNALING_SERVER</p>
-        ) : (
-          <VideoCall roomId={roomId} />
-        )}
-z
-        <p>Room ID: <strong>{roomId}</strong></p>
-      </main>
+      <h1>Next.js Video Call App</h1>
+      {!roomId || !joining ? (
+        <div>
+          <button onClick={handleCreateRoom} style={{ margin: "10px", padding: "10px 20px" }}>
+            Create Room
+          </button>
+          <br />
+          <input
+            type="text"
+            placeholder="Enter Room ID"
+            value={roomId}
+            onChange={(e) => setRoomId(e.target.value)}
+            style={{ padding: "5px", marginRight: "5px" }}
+          />
+          <button onClick={handleJoinRoom} style={{ padding: "5px 10px" }}>Join Room</button>
+        </div>
+      ) : (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", height: "100vh" }}>
+          <div style={{ flex: 1, padding: "10px", borderRight: "1px solid #ccc" }}>
+            <VideoCall roomId={roomId} />
+          </div>
+          <div style={{ width: "300px", padding: "10px" }}>
+            <Chat roomId={roomId} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
