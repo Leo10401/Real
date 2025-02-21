@@ -45,6 +45,19 @@ io.on("connection", (socket) => {
     io.to(data.to).emit("signal", data);
   });
 
+  socket.on('join-chat', ({ roomId, userName }) => {
+    socket.join(roomId);
+    io.to(roomId).emit('chat-message', {
+      userName: 'System',
+      text: `${userName} has joined the chat`,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  socket.on('send-message', (messageData) => {
+    io.to(messageData.roomId).emit('chat-message', messageData);
+  });
+
   socket.on("disconnect", () => {
     console.log("Client disconnected:", socket.id);
   });
