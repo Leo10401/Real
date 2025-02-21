@@ -10,12 +10,38 @@ const VideoCall = ({ roomId, userName }) => {
   const userVideoRef = useRef(null);
   const peersRef = useRef([]);
   const socketRef = useRef(null);
+  const streamRef = useRef(null);
 
   useEffect(() => {
     if (!roomId) return;
 
+    let localStream = null;
+
+    const cleanup = () => {
+      if (localStream) {
+        localStream.getTracks().forEach(track => {
+          track.stop();
+          console.log('Stopping track:', track.kind);
+        });
+      }
+      if (socketRef.current) {
+        socketRef.current.emit("leave-room", { roomId, userName });
+        socketRef.current.disconnect();
+      }
+      // Destroy all peer connections
+      peersRef.current.forEach(({ peer }) => {
+        if (peer) {
+          peer.destroy();
+        }
+      });
+      peersRef.current = [];
+      setPeers([]);
+    };
+
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       .then((stream) => {
+        localStream = stream;
+        streamRef.current = stream;
         if (userVideoRef.current) {
           userVideoRef.current.srcObject = stream;
         }
@@ -46,17 +72,22 @@ const VideoCall = ({ roomId, userName }) => {
           const peerObj = peersRef.current.find(p => p.peerID === userId);
           if (peerObj) {
             peerObj.peer.destroy();
+            const videoElement = document.querySelector(`[data-peer-id="${userId}"]`);
+            if (videoElement) {
+              videoElement.srcObject = null;
+            }
           }
           peersRef.current = peersRef.current.filter(p => p.peerID !== userId);
           setPeers((prevPeers) => prevPeers.filter(p => p.peerID !== userId));
         });
+
+        window.addEventListener('beforeunload', cleanup);
       })
       .catch((err) => console.error("Failed to get media stream:", err));
 
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
+      window.removeEventListener('beforeunload', cleanup);
+      cleanup();
     };
   }, [roomId, userName]);
 
@@ -112,6 +143,7 @@ const VideoCall = ({ roomId, userName }) => {
             key={peerObj.peerID} 
             peer={peerObj.peer} 
             userName={peerObj.userName}
+            peerId={peerObj.peerID}
           />
         ))}
       </div>
@@ -119,7 +151,7 @@ const VideoCall = ({ roomId, userName }) => {
   );
 };
 
-const PeerVideo = ({ peer, userName }) => {
+const PeerVideo = ({ peer, userName, peerId }) => {
   const ref = useRef();
 
   useEffect(() => {
@@ -142,7 +174,8 @@ const PeerVideo = ({ peer, userName }) => {
   return (
     <div className="relative w-full">
       <video 
-        ref={ref} 
+        ref={ref}
+        data-peer-id={peerId}
         autoPlay 
         playsInline 
         className="w-full rounded-lg border border-gray-300 shadow-md"

@@ -37,6 +37,16 @@ const HomePage = () => {
     setJoining(true);
   };
 
+  const handleLeaveRoom = () => {
+    if (window.confirm('Are you sure you want to leave the room?')) {
+      setJoining(false);
+      setRoomId("");
+      setUserName("");
+      setIsChatOpen(false);
+      window.history.replaceState({}, "", "/");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 p-2 sm:p-4">
       <Head>
@@ -101,6 +111,15 @@ const HomePage = () => {
         </div>
       ) : (
         <div className="flex flex-col md:flex-row gap-4 relative">
+          <div className="w-full flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">Room: {roomId}</h2>
+            <button
+              onClick={handleLeaveRoom}
+              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            >
+              Leave Room
+            </button>
+          </div>
           <div className="w-full md:flex-1">
             <VideoCall roomId={roomId} userName={userName} />
           </div>
