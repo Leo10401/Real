@@ -47,18 +47,18 @@ const Chat = ({ roomId, userName }) => {
   };
 
   return (
-    <div className="flex flex-col h-[600px] w-80 bg-white rounded-lg shadow-md">
-      <div className="p-4 border-b">
+    <div className="flex flex-col h-[400px] md:h-[600px] w-full md:w-80 bg-white rounded-lg shadow-md">
+      <div className="p-3 border-b">
         <h2 className="text-lg font-semibold">Chat Room</h2>
       </div>
       
-      <div className="flex-1 p-4 overflow-y-auto">
+      <div className="flex-1 p-3 overflow-y-auto">
         {messages.map((msg, index) => (
-          <div key={index} className="mb-4">
-            <div className="font-semibold text-sm text-gray-600">
+          <div key={index} className="mb-3">
+            <div className="font-semibold text-xs sm:text-sm text-gray-600">
               {msg.userName}
             </div>
-            <div className="bg-gray-100 rounded-lg p-2 mt-1">
+            <div className="bg-gray-100 rounded-lg p-2 mt-1 text-sm">
               {msg.text}
             </div>
           </div>
@@ -66,18 +66,18 @@ const Chat = ({ roomId, userName }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={sendMessage} className="p-4 border-t">
+      <form onSubmit={sendMessage} className="p-3 border-t">
         <div className="flex gap-2">
           <input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type a message..."
-            className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            className="px-3 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
           >
             Send
           </button>

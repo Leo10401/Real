@@ -90,18 +90,29 @@ const VideoCall = ({ roomId, userName }) => {
   };
 
   return (
-    <div>
-      <h2>Your Video</h2>
-      <div className="relative">
-        <video ref={userVideoRef} autoPlay playsInline muted style={{ width: "300px", border: "1px solid #ccc" }} />
-        <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded">
+    <div className="p-2">
+      <h2 className="text-xl font-semibold mb-2">Your Video</h2>
+      <div className="relative w-full">
+        <video 
+          ref={userVideoRef} 
+          autoPlay 
+          playsInline 
+          muted 
+          className="w-full max-w-[600px] mx-auto rounded-lg border border-gray-300 shadow-md"
+        />
+        <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
           {userName} (You)
         </div>
       </div>
-      <h2>Remote Videos</h2>
-      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center" }}>
+
+      <h2 className="text-xl font-semibold mt-4 mb-2">Remote Videos ({peers.length})</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {peers.map((peerObj) => (
-          <PeerVideo key={peerObj.peerID} peer={peerObj.peer} userName={peerObj.userName} />
+          <PeerVideo 
+            key={peerObj.peerID} 
+            peer={peerObj.peer} 
+            userName={peerObj.userName}
+          />
         ))}
       </div>
     </div>
@@ -129,9 +140,14 @@ const PeerVideo = ({ peer, userName }) => {
   }, [peer]);
 
   return (
-    <div className="relative">
-      <video ref={ref} autoPlay playsInline style={{ width: "300px", margin: "10px", border: "1px solid #ccc" }} />
-      <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded">
+    <div className="relative w-full">
+      <video 
+        ref={ref} 
+        autoPlay 
+        playsInline 
+        className="w-full rounded-lg border border-gray-300 shadow-md"
+      />
+      <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
         {userName}
       </div>
     </div>

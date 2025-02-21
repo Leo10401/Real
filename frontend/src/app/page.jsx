@@ -37,16 +37,16 @@ const HomePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4">
+    <div className="min-h-screen bg-gray-100 p-2 sm:p-4">
       <Head>
         <title>Next.js Video Call App</title>
         <meta name="description" content="A simple video calling app using Next.js, WebRTC, and Socket.IO" />
       </Head>
 
-      <h1 className="text-3xl font-bold text-center mb-8">Video Chat App</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold text-center mb-4 sm:mb-8">Video Chat App</h1>
       
       {!joining ? (
-        <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md">
+        <div className="max-w-md mx-auto bg-white p-4 sm:p-8 rounded-lg shadow-md">
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Your Name
@@ -99,11 +99,11 @@ const HomePage = () => {
           )}
         </div>
       ) : (
-        <div className="flex gap-4">
-          <div className="flex-1">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="w-full md:flex-1">
             <VideoCall roomId={roomId} userName={userName} />
           </div>
-          <div className="w-80">
+          <div className="w-full md:w-80 mt-4 md:mt-0">
             <Chat roomId={roomId} userName={userName} />
           </div>
         </div>
