@@ -10,6 +10,7 @@ const HomePage = () => {
   const [userName, setUserName] = useState("");
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState("");
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const handleCreateRoom = () => {
     if (!userName.trim()) {
@@ -99,13 +100,43 @@ const HomePage = () => {
           )}
         </div>
       ) : (
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col md:flex-row gap-4 relative">
           <div className="w-full md:flex-1">
             <VideoCall roomId={roomId} userName={userName} />
           </div>
-          <div className="w-full md:w-80 mt-4 md:mt-0">
+          
+          {/* Chat Toggle Button - Only visible on mobile */}
+          <button
+            onClick={() => setIsChatOpen(!isChatOpen)}
+            className="fixed bottom-4 right-4 z-50 md:hidden bg-blue-500 text-white p-3 rounded-full shadow-lg"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+          </button>
+
+          {/* Desktop Chat */}
+          <div className="hidden md:block w-80">
             <Chat roomId={roomId} userName={userName} />
           </div>
+
+          {/* Mobile Chat Modal */}
+          {isChatOpen && (
+            <div className="fixed inset-0 z-50 md:hidden">
+              <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setIsChatOpen(false)} />
+              <div className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl max-h-[80vh]">
+                <div className="p-4 border-b flex justify-between items-center">
+                  <h2 className="text-lg font-semibold">Chat</h2>
+                  <button onClick={() => setIsChatOpen(false)} className="text-gray-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <Chat roomId={roomId} userName={userName} isMobile={true} />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
