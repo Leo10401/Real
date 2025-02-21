@@ -32,17 +32,21 @@ io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
 
   // Join a room for signaling
-  socket.on("join-room", (roomId) => {
+  socket.on("join-room", ({ roomId, userName }) => {
     socket.join(roomId);
-    console.log(`Socket ${socket.id} joined room ${roomId}`);
-    socket.to(roomId).emit("user-connected", socket.id);
+    console.log(`User ${socket.id} (${userName}) joined room ${roomId}`);
+    socket.to(roomId).emit("user-connected", { userId: socket.id, userName });
   });
 
   // Relay signaling data (offer, answer, ICE candidates)
   socket.on("signal", (data) => {
     // data: { to, from, signal }
     console.log(`Signal from ${data.from} to ${data.to}`);
-    io.to(data.to).emit("signal", data);
+    io.to(data.to).emit("signal", {
+      signal: data.signal,
+      from: data.from,
+      userName: data.userName
+    });
   });
 
   socket.on('join-chat', ({ roomId, userName }) => {

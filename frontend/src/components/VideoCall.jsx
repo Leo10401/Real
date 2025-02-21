@@ -5,7 +5,7 @@ import SimplePeer from "simple-peer";
 
 const SIGNALING_SERVER = process.env.NEXT_PUBLIC_SIGNALING_SERVER;
 
-const VideoCall = ({ roomId }) => {
+const VideoCall = ({ roomId, userName }) => {
   const [peers, setPeers] = useState([]);
   const userVideoRef = useRef(null);
   const peersRef = useRef([]);
@@ -21,13 +21,13 @@ const VideoCall = ({ roomId }) => {
         }
 
         socketRef.current = io(SIGNALING_SERVER);
-        socketRef.current.emit("join-room", roomId);
+        socketRef.current.emit("join-room", { roomId, userName });
 
-        socketRef.current.on("user-connected", (userId) => {
-          console.log("User connected:", userId);
+        socketRef.current.on("user-connected", ({ userId, userName }) => {
+          console.log("User connected:", userId, userName);
           const peer = createPeer(userId, socketRef.current.id, stream);
-          peersRef.current.push({ peerID: userId, peer });
-          setPeers((prevPeers) => [...prevPeers, { peerID: userId, peer }]);
+          peersRef.current.push({ peerID: userId, peer, userName });
+          setPeers((prevPeers) => [...prevPeers, { peerID: userId, peer, userName }]);
         });
 
         socketRef.current.on("signal", (data) => {
@@ -36,8 +36,8 @@ const VideoCall = ({ roomId }) => {
             existingPeer.peer.signal(data.signal);
           } else {
             const peer = addPeer(data.signal, data.from, stream);
-            peersRef.current.push({ peerID: data.from, peer });
-            setPeers((prevPeers) => [...prevPeers, { peerID: data.from, peer }]);
+            peersRef.current.push({ peerID: data.from, peer, userName: data.userName });
+            setPeers((prevPeers) => [...prevPeers, { peerID: data.from, peer, userName: data.userName }]);
           }
         });
 
@@ -58,7 +58,7 @@ const VideoCall = ({ roomId }) => {
         socketRef.current.disconnect();
       }
     };
-  }, [roomId]);
+  }, [roomId, userName]);
 
   const createPeer = (userToSignal, callerID, stream) => {
     const peer = new SimplePeer({
@@ -68,7 +68,7 @@ const VideoCall = ({ roomId }) => {
     });
 
     peer.on("signal", (signal) => {
-      socketRef.current.emit("signal", { to: userToSignal, from: callerID, signal });
+      socketRef.current.emit("signal", { to: userToSignal, from: callerID, signal, userName });
     });
 
     return peer;
@@ -82,7 +82,7 @@ const VideoCall = ({ roomId }) => {
     });
 
     peer.on("signal", (signal) => {
-      socketRef.current.emit("signal", { to: callerID, from: socketRef.current.id, signal });
+      socketRef.current.emit("signal", { to: callerID, from: socketRef.current.id, signal, userName });
     });
 
     peer.signal(incomingSignal);
@@ -92,18 +92,23 @@ const VideoCall = ({ roomId }) => {
   return (
     <div>
       <h2>Your Video</h2>
-      <video ref={userVideoRef} autoPlay playsInline muted style={{ width: "300px", border: "1px solid #ccc" }} />
+      <div className="relative">
+        <video ref={userVideoRef} autoPlay playsInline muted style={{ width: "300px", border: "1px solid #ccc" }} />
+        <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded">
+          {userName} (You)
+        </div>
+      </div>
       <h2>Remote Videos</h2>
       <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center" }}>
         {peers.map((peerObj) => (
-          <PeerVideo key={peerObj.peerID} peer={peerObj.peer} />
+          <PeerVideo key={peerObj.peerID} peer={peerObj.peer} userName={peerObj.userName} />
         ))}
       </div>
     </div>
   );
 };
 
-const PeerVideo = ({ peer }) => {
+const PeerVideo = ({ peer, userName }) => {
   const ref = useRef();
 
   useEffect(() => {
@@ -116,7 +121,6 @@ const PeerVideo = ({ peer }) => {
     peer.on("stream", handleStream);
 
     return () => {
-      // Cleanup when component unmounts or peer changes
       if (ref.current) {
         ref.current.srcObject = null;
       }
@@ -124,7 +128,14 @@ const PeerVideo = ({ peer }) => {
     };
   }, [peer]);
 
-  return <video ref={ref} autoPlay playsInline style={{ width: "300px", margin: "10px", border: "1px solid #ccc" }} />;
+  return (
+    <div className="relative">
+      <video ref={ref} autoPlay playsInline style={{ width: "300px", margin: "10px", border: "1px solid #ccc" }} />
+      <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded">
+        {userName}
+      </div>
+    </div>
+  );
 };
 
 export default VideoCall;
